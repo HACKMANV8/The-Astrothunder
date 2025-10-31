@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwiftSlot: Smart Parking Finder</title>
+    
+    <!-- Tailwind CSS CDN --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN --><script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Custom styles for smoother shadow and responsive video */
+        body {
+            /* *** CRITICAL: REPLACE THIS URL with the DIRECT IMAGE URL (must end in .jpg, .png, etc.) 
+               You need to obtain this link from your Flickr share page's download or right-click menu. 
+            */
+            background-image: url('https://live.staticflickr.com/65535/54890413780_e2ca3c5ed1_z.jpg'); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed; /* Keeps background still while scrolling */
+            background-color: #f3f4f6; /* Fallback */
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Crucial overlay to ensure text is readable over the image */
+        #app-overlay {
+            /* Adjusted for more background visibility */
+            background-color: rgba(255, 255, 255, 0.85); /* Changed from 0.95 to 0.85 */
+            min-height: 100vh;
+        }
+
+        .card-shadow {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* Make the image responsive inside its container */
+        #live-feed {
+            width: 100%;
+            height: auto;
+        }
+        /* Base button style for location selector */
+        .location-card {
+            transition: all 0.2s;
+        }
+        .location-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 25px -5px rgba(30, 64, 175, 0.2);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary-blue': '#1e40af',
+                        'secondary-green': '#10b981',
+                        'danger-red': '#ef4444',
+                        'swift-purple': '#8b5cf6', /* Brand color */
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                }
+            }
+        }
+
+        // --- Configuration & Simulated Data for Multiple Lots ---
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+        const VIDEO_FEED_URL = `${API_BASE_URL}/video_feed`;
+        const STATUS_API_URL = `${API_BASE_URL}/api/status`;
+        const POLLING_INTERVAL = 3000; // Poll every 3 seconds
+        
+        // Simulated location data (used for navigation and capacity)
+        const LOCATIONS = [
+            { 
+                id: 'main_lot', 
+                name: 'SwiftSlot Main Lot', 
+                address: '123 AI Boulevard, Tech City', 
+                coords: '37.7749,-122.4194', 
+                total_capacity: 50 
+            },
+            { 
+                id: 'DSCE_college', 
+                name: 'DSCE COLLEGE PARKING', 
+                address: 'Shavige Malleshwara Hills, 91st Main Rd, 1st Stage, Kumaraswamy Layout, Bengaluru, Karnataka 560111, India', 
+                coords: '12.9092° N, 77.5666° E', 
+                total_capacity: 120
+            }
+        ];
+
+        // State management
+        let isPolling = false;
+        let selectedLocation = null;
+        let pollingIntervalId = null;
+
+        /**
+         * Renders the location selection cards based on the LOCATIONS array.
+         */
+        function renderLocationSelector() {
+            const container = document.getElementById('location-list-container');
+            container.innerHTML = LOCATIONS.map(loc => `
+                <button 
+                    onclick="selectLocation('${loc.id}')"
+                    class="location-card text-left p-6 bg-white rounded-xl border border-gray-200 hover:border-swift-purple hover:bg-swift-purple/5 focus:outline-none focus:ring-4 focus:ring-swift-purple/50 flex flex-col items-start"
+                >
+                    <div class="flex items-center space-x-3 mb-2">
+                        <i data-lucide="parking-square" class="w-6 h-6 mr-1 text-swift-purple"></i>
+                        <h4 class="text-xl font-semibold text-gray-900">${loc.name}</h4>
+                    </div>
+                    <p class="text-gray-500 text-sm">${loc.address}</p>
+                    <span class="mt-4 text-xs font-medium text-gray-700 bg-gray-100 px-3 py-1 rounded-full">Capacity: ${loc.total_capacity} spots</span>
+                </button>
+            `).join('');
+
+            // Replace lucide icon tags with SVG elements
+            lucide.createIcons();
+        }
+
+        /**
+         * Switches the view to the main dashboard for the selected location.
+         * @param {string} locationId - The ID of the selected location.
+         */
+        function selectLocation(locationId) {
+            selectedLocation = LOCATIONS.find(loc => loc.id === locationId);
+            
+            if (!selectedLocation) {
+                console.error("Location not found:", locationId);
+                return;
+            }
+
+            // Update dashboard content and switch views
+            document.getElementById('location-selector-view').classList.add('hidden');
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            
+            document.getElementById('dashboard-location-title').textContent = selectedLocation.name;
+            document.getElementById('dashboard-location-address').textContent = selectedLocation.address;
+            
+            // Set directions link
+            const directionsLink = document.getElementById('directions-link');
+            directionsLink.href = `https://www.google.com/maps/dir/?api=1&destination=${selectedLocation.coords}`;
+            directionsLink.target = '_blank';
+            
+            // Start the video feed stream
+            const videoFeed = document.getElementById('live-feed');
+            videoFeed.src = VIDEO_FEED_URL; 
+            
+            lucide.createIcons();
+            startPolling();
+        }
+
+        /**
+         * Navigates back to the location selection view and stops polling.
+         */
+        function goBackToLocations() {
+            // Stop polling to save resources
+            stopPolling(); 
+            
+            // Stop video feed streaming
+            document.getElementById('live-feed').src = '';
+
+            // Switch views
+            document.getElementById('dashboard-view').classList.add('hidden');
+            document.getElementById('location-selector-view').classList.remove('hidden');
+            
+            // Reset API status display
+            document.getElementById('api-status-pill').innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 mr-1 animate-spin"></i> API Connecting';
+            document.getElementById('api-status-pill').className = 'flex items-center text-sm font-medium bg-yellow-600/20 text-yellow-600 p-1.5 rounded-full';
+            lucide.createIcons();
+        }
+
+        /**
+         * Updates the status card elements in the DOM.
+         */
+        function updateDOM(free, occupied, total) {
+            document.getElementById('free-count').textContent = free;
+            
+            const availabilityMessage = document.getElementById('availability-message');
+            const freeCount = typeof free === 'number' ? free : 0;
+            const totalCount = typeof total === 'number' ? total : 0;
+            const capacityDisplay = document.getElementById('capacity-display');
+            
+            if(selectedLocation) {
+                capacityDisplay.textContent = `${freeCount} / ${selectedLocation.total_capacity} Available`;
+            } else {
+                 capacityDisplay.textContent = `${freeCount} Available`;
+            }
+
+            if (freeCount > 0) {
+                availabilityMessage.textContent = `${freeCount} Slots Available!`;
+                availabilityMessage.className = 'text-secondary-green font-bold';
+            } else if (totalCount > 0) {
+                availabilityMessage.textContent = 'Lot is Full';
+                availabilityMessage.className = 'text-danger-red font-bold';
+            } else {
+                availabilityMessage.textContent = 'Checking Status...';
+                availabilityMessage.className = 'text-yellow-600 font-bold';
+            }
+        }
+
+
+        /**
+         * Fetches and updates the parking status from the Flask API.
+         */
+        async function fetchAndRenderStatus() {
+            if (!isPolling) return; 
+
+            // Show loading state while fetching
+            updateDOM('...', '...', '...');
+            
+            try {
+                const response = await fetch(STATUS_API_URL, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                
+                // Success: Update DOM with fetched data
+                updateDOM(data.free_spots, data.occupied_spots, data.occupied_spots + data.free_spots);
+                document.getElementById('api-status-pill').innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 mr-1"></i> API Active';
+                document.getElementById('api-status-pill').className = 'flex items-center text-sm font-medium bg-secondary-green/20 text-secondary-green p-1.5 rounded-full';
+                lucide.createIcons();
+
+            } catch (error) {
+                console.error("API Fetch Error:", error.message);
+                
+                // Failure: Update DOM to reflect the error
+                updateDOM('N/A', 'N/A', 'N/A');
+                document.getElementById('api-status-pill').innerHTML = '<i data-lucide="x-circle" class="w-4 h-4 mr-1"></i> API Error';
+                document.getElementById('api-status-pill').className = 'flex items-center text-sm font-medium bg-danger-red/20 text-danger-red p-1.5 rounded-full';
+                lucide.createIcons();
+
+                // Stop video feed and polling on error
+                document.getElementById('live-feed').src = 'https://placehold.co/800x450/e0e7ff/1e40af?text=API+OFFLINE';
+                stopPolling();
+            }
+        }
+
+        /**
+         * Starts the API status polling interval.
+         */
+        function startPolling() {
+            if (isPolling) return;
+            isPolling = true;
+            
+            fetchAndRenderStatus();
+            pollingIntervalId = setInterval(fetchAndRenderStatus, POLLING_INTERVAL);
+        }
+
+        /**
+         * Stops the API status polling interval.
+         */
+        function stopPolling() {
+            if (pollingIntervalId) {
+                clearInterval(pollingIntervalId);
+                pollingIntervalId = null;
+                isPolling = false;
+            }
+        }
+
+
+        window.onload = () => {
+            renderLocationSelector();
+            lucide.createIcons();
+
+            // Handle video loading errors (e.g., if the server is down or CORS issue)
+            const videoFeed = document.getElementById('live-feed');
+            videoFeed.onerror = () => {
+                console.error("Failed to load video feed. Ensure Flask server is running and accessible at " + VIDEO_FEED_URL);
+                videoFeed.src = 'https://placehold.co/800x450/e0e7ff/1e40af?text=VIDEO+FEED+OFFLINE';
+            };
+
+            updateDOM('...', '...', '...');
+        };
+
+    </script>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen">
+
+    <div id="app-overlay" class="p-4 sm:p-8">
+        
+        <!-- Global Header --><header class="text-center mb-8">
+            <h1 class="4xl sm:text-5xl font-extrabold text-swift-purple tracking-tight">
+                SwiftSlot
+            </h1>
+            <p class="text-xl text-gray-600 mt-2">Find Your Spot, Swiftly</p>
+        </header>
+
+        <main class="max-w-6xl mx-auto">
+            
+            <!-- ============================================== --><!-- 1. LOCATION SELECTION VIEW (DEFAULT) --><!-- ============================================== --><section id="location-selector-view" class="p-6 bg-white rounded-xl card-shadow border border-gray-200">
+                <h2 class="text-3xl font-bold text-gray-800 mb-6 flex items-center">
+                    <i data-lucide="map-pin" class="w-7 h-7 mr-3 text-swift-purple"></i>
+                    Select Your Parking Location
+                </h2>
+                <p class="text-gray-600 mb-8">Choose a lot to see real-time availability and directions.</p>
+                
+                <div id="location-list-container" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Location cards will be dynamically inserted here by JavaScript --></div>
+            </section>
+
+            <!-- ============================================== --><!-- 2. DASHBOARD VIEW (HIDDEN INITIALLY) --><!-- ============================================== --><section id="dashboard-view" class="hidden">
+
+                <div class="flex justify-between items-center mb-6 p-4 bg-white rounded-xl card-shadow border border-swift-purple/20">
+                    <div class="flex items-center">
+                        <!-- Go Back Button --><button onclick="goBackToLocations()" class="mr-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full text-gray-600 hover:text-gray-800 transition duration-150">
+                            <i data-lucide="arrow-left" class="w-6 h-6"></i>
+                        </button>
+                        <div>
+                            <h2 class="text-3xl font-bold text-gray-800" id="dashboard-location-title">Loading Lot...</h2>
+                            <p class="text-gray-500 text-sm" id="dashboard-location-address">Checking address...</p>
+                        </div>
+                    </div>
+                    <div id="api-status-pill" class="flex items-center text-sm font-medium bg-yellow-600/20 text-yellow-600 p-1.5 rounded-full">
+                        <i data-lucide="loader-2" class="w-4 h-4 mr-1 animate-spin"></i> API Connecting
+                    </div>
+                </div>
+
+                <!-- Dashboard Features: Slots Available, Directions --><div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    
+                    <!-- Feature 1: Available Slots (Main Metric) --><div class="lg:col-span-2 p-6 bg-secondary-green/10 rounded-xl card-shadow border-2 border-secondary-green/50 flex flex-col justify-between">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-2xl font-semibold text-gray-800 flex items-center">
+                                <i data-lucide="car" class="w-6 h-6 mr-2 text-secondary-green"></i>
+                                Slots Available
+                            </h3>
+                            <div class="py-1 px-4 rounded-full bg-swift-purple/10">
+                                <p id="availability-message" class="text-lg font-bold text-yellow-600">Checking Status...</p>
+                            </div>
+                        </div>
+                        
+                        <div class="text-6xl font-extrabold text-secondary-green mt-4">
+                            <span id="free-count">...</span>
+                            <span class="text-xl text-gray-600 font-normal ml-2">slots free</span>
+                        </div>
+
+                        <p class="mt-2 text-sm text-gray-500" id="capacity-display">Loading capacity...</p>
+                    </div>
+
+                    <!-- Feature 2: Get Directions --><div class="p-6 bg-swift-purple/10 rounded-xl card-shadow border-2 border-swift-purple/50 flex flex-col justify-center items-center text-center">
+                        <h3 class="text-2xl font-semibold text-gray-800 mb-3 flex items-center">
+                            <i data-lucide="navigation" class="w-6 h-6 mr-2 text-swift-purple"></i>
+                            Get Directions
+                        </h3>
+                        <a id="directions-link" href="#" target="_blank" class="w-full">
+                            <button class="w-full mt-2 py-3 px-6 bg-swift-purple text-white font-bold rounded-lg shadow-lg hover:bg-swift-purple/90 transition duration-150 flex items-center justify-center space-x-2">
+                                <i data-lucide="map-pin" class="w-5 h-5"></i>
+                                <span>Navigate with Google Maps</span>
+                            </button>
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Video Feed Section --><section class="p-2 sm:p-6 bg-gray-900 rounded-xl card-shadow overflow-hidden">
+                    <h3 class="text-2xl font-semibold text-white mb-4">Live AI Analysis Feed</h3>
+                    <div class="aspect-video bg-gray-800 rounded-lg overflow-hidden border-2 border-gray-700">
+                        <img 
+                            id="live-feed" 
+                            src="" 
+                            alt="Real-time AI Parking Analysis Stream" 
+                            class="object-cover w-full h-full transition duration-300 ease-in-out hover:opacity-90"
+                        >
+                    </div>
+                    <p class="mt-4 text-sm text-gray-400">
+                        The raw detection stream from the API server is shown above.
+                    </p>
+                </section>
+            </section>
+
+        </main>
+
+        <footer class="mt-12 text-center text-gray-500 text-sm">
+            <p>&copy; 2025 SwiftSlot Parking Management. Integrated with Flask/YOLOv8 API.</p>
+        </footer>
+    </div>
+
+    <script>
+        // Initial render of Lucide icons after page load
+        lucide.createIcons();
+    </script>
+</body>
+</html>
