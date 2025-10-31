@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">SWIFT SLOT - Parking Status</title>
+    <style>
+        :root {
+            --neon-blue: #00ffff;
+            --neon-purple: #a759f5;
+            --neon-green: #2ecc71;
+            --neon-red: #e74c3c;
+            --dark-background: #111827;
+            --mid-background: #1f2937;
+            --text-color: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background-color: var(--dark-background);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* --- Header --- */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #374151;
+            max-width: 1400px;
+            margin: 0 auto 30px auto;
+        }
+        .header {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--neon-blue);
+            text-shadow: 0 0 5px var(--neon-blue), 0 0 15px var(--neon-blue), 0 0 25px var(--neon-blue);
+        }
+        .headline {
+            font-size: 1.2rem;
+            font-weight: 300;
+            margin: 5px 0 0 0;
+            color: #b0c4de;
+        }
+
+        /* --- Main Layout Grid --- */
+        .container {
+            display: grid;
+            /* Updated to 2-column layout for better dashboard feel */
+            grid-template-columns: 2fr 1fr; 
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px; /* Wider for dashboard */
+            margin: auto;
+        }
+        /* Stack on smaller screens */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* --- Card Styling --- */
+        .card {
+            background-color: var(--mid-background);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #374151;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+        .card:hover {
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 20px rgba(167, 89, 245, 0.3);
+        }
+        .card h2 {
+            margin-top: 0;
+            font-size: 1.5rem;
+            color: var(--neon-purple);
+            border-bottom: 1px solid var(--neon-purple);
+            padding-bottom: 10px;
+            text-shadow: 0 0 5px var(--neon-purple);
+        }
+
+        /* --- Status Metrics (Upgraded) --- */
+        .status-container {
+            display: grid;
+            /* Updated to 3 columns for Free, Occupied, Total */
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 15px;
+            text-align: center;
+        }
+        .status-item {
+            font-size: 1rem; /* Smaller label */
+            background-color: var(--dark-background);
+            border: 1px solid #374151;
+            border-radius: 10px;
+            padding: 15px 10px;
+            transition: all 0.3s ease;
+        }
+        .status-item .count {
+            display: block;
+            font-size: 2.5rem; /* Large count */
+            font-weight: 700;
+            margin-top: 10px;
+        }
+        #free-slots .count {
+            color: var(--neon-green);
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+        #occupied-slots .count {
+            color: var(--neon-red);
+            text-shadow: 0 0 10px var(--neon-red);
+        }
+        #total-slots .count {
+            color: var(--text-color); /* White/Text color */
+        }
+        
+        /* --- Video & Map --- */
+        .video-preview {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 16 / 9;
+            border-radius: 10px;
+            /* Updated border to be more prominent */
+            border: 3px solid var(--neon-blue); 
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+            background-color: #000;
+        }
+        .map-container {
+            position: relative;
+            overflow: hidden;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            border-radius: 10px;
+            border: 1px solid #374151;
+        }
+        .map-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        /* --- Back Button --- */
+        .back-link {
+            display: inline-block;
+            color: var(--neon-blue);
+            text-decoration: none;
+            border: 1px solid var(--neon-blue);
+            padding: 10px 20px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            font-weight: 700;
+        }
+        .back-link:hover {
+            background-color: var(--neon-blue);
+            color: var(--dark-background);
+            box-shadow: 0 0 15px var(--neon-blue);
+        }
+        
+        /* --- Direction Text --- */
+        #direction-text {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #b0c4de;
+            margin-bottom: 20px;
+        }
+        #direction-text strong {
+            color: var(--neon-green);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div>
+            <h1 class="header">SWIFT SLOT</h1>
+            <!-- HEADLINE IS NOW DYNAMIC -->
+            <p class="headline" id="location-headline">Grid Activated: Connecting to Zone...</p>
+        </div>
+        <!-- BACK LINK FIXED -->
+        <a class="back-link" href="selection.html">
+            &larr; Change Zone
+        </a>
+    </div>
+
+    <div class="container">
+        
+        <!-- Left Column -->
+        <div class="card">
+            <!-- TITLE IS NOW DYNAMIC -->
+            <h2 id="live-feed-title">Live Feed: Initializing...</h2>
+            <!-- DYNAMIC VIDEO FEED: src will be set by JavaScript -->
+            <img id="live-video-feed" class="video-preview" src="" alt="Live Parking Feed">
+            <p style="font-size: 0.8rem; color: #6b7280; margin-top: 10px;">
+                Last API Update: <span id="last-update-time">...</span>
+            </p>
+        </div>
+
+        <!-- Right Column -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- CARD 1: System Status -->
+            <div class="card">
+                <h2>System Status</h2>
+                <div class="status-container">
+                    
+                    <!-- AVAILABLE SLOTS (from request) -->
+                    <div class="status-item" id="free-slots">
+                        <span>Free Slots</span>
+                        <span class="count">...</span>
+                    </div>
+                    
+                    <!-- RENAMED from filled-slots -->
+                    <div class="status-item" id="occupied-slots">
+                        <span>Occupied Slots</span>
+                        <span class="count">...</span>
+                    </div>
+
+                    <!-- NO OF SLOTS (TOTAL) (Added Feature) -->
+                    <div class="status-item" id="total-slots">
+                        <span>Total Slots</span>
+                        <span class="count">...</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 2: Directions (Added Feature) -->
+            <div class="card">
+                <h2>Direction to Lot</h2>
+                <!-- DYNAMIC DIRECTION TEXT -->
+                <p id="direction-text">
+                    Calculating optimal route...
+                </p>
+                <div class="map-container">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3153.019551481961!2d-122.4194154846813!3d37.77492957975825!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x80858064942d7777%3A0x4a501367f076adff!2sSan%20Francisco%20City%20Hall!5e0!3m2!1sen!2sus!4v1678886400000!5m2!1sen!2sus" allowfullscreen="" loading="lazy"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // !!! IMPORTANT: Set this to your Python Flask server's URL !!!
+        const FLASK_BASE_URL = 'http://127.0.0.1:5000';
+        const POLLING_INTERVAL = 3000; // Poll every 3 seconds
+
+        // --- ELEMENT SELECTORS ---
+        const freeSlotsEl = document.querySelector('#free-slots .count');
+        // FIXED ID from #filled-slots to #occupied-slots
+        const occupiedSlotsEl = document.querySelector('#occupied-slots .count');
+        // ADDED for "No of Slots"
+        const totalSlotsEl = document.querySelector('#total-slots .count'); 
+        
+        const videoFeed = document.getElementById('live-video-feed');
+        const liveFeedTitle = document.getElementById('live-feed-title');
+        const pageTitle = document.getElementById('page-title');
+        const locationHeadline = document.getElementById('location-headline');
+        const directionTextEl = document.getElementById('direction-text');
+        const lastUpdateTimeEl = document.getElementById('last-update-time');
+
+        // --- PAGE INITIALIZATION (Added) ---
+        // This logic connects the page to selection.html
+        const selectedLocation = localStorage.getItem('selectedParkingLocation');
+        
+        if (!selectedLocation) {
+            alert('No parking location selected. Redirecting to selection page.');
+            window.location.href = 'selection.html';
+        } else {
+            const formattedLocation = selectedLocation.replace(/_/g, ' ');
+
+            // 1. Set dynamic text based on selection
+            pageTitle.textContent = `SWIFT SLOT: ${formattedLocation}`;
+            liveFeedTitle.textContent = `Live Feed: ${formattedLocation}`;
+            locationHeadline.textContent = `Grid Activated: Monitoring ${formattedLocation}`;
+            
+            // 2. Set "Direction to Parking Lot" text
+            directionTextEl.innerHTML = `Route plotted for <strong>${formattedLocation}</strong>.<br>Follow neon blue ground indicators.`;
+            
+            // 3. Set dynamic video feed source
+            videoFeed.src = `${FLASK_BASE_URL}/video_feed?location=${selectedLocation}`;
+            videoFeed.onerror = () => {
+                // Handle case where video feed fails to load
+                liveFeedTitle.textContent = `Live Feed: ${formattedLocation} (OFFLINE)`;
+                liveFeedTitle.style.color = "var(--neon-red)";
+            };
+        }
+
+        // --- DATA POLLING FUNCTION (Updated) ---
+        async function updateParkingStatus() {
+            if (!selectedLocation) return; // Don't run if no location is set
+
+            try {
+                // Fetch data from your Python API
+                const response = await fetch(`${FLASK_BASE_URL}/api/status`);
+                if (!response.ok) {
+                    throw new Error(`API Connection Failed (Status: ${response.status})`);
+                }
+                
+                const data = await response.json();
+                
+                // Read data from API based on your README.md { "free": X, "occupied": Y }
+                // [cite: uploaded:ishan-7230/yolo_parking-project/YOLO_parking-project-dab49e9260776275eb5790a64eff68873dc01501/README.md]
+                const free = data.free !== undefined ? data.free : 0;
+                const occupied = data.occupied !== undefined ? data.occupied : 0;
+                
+                // Calculate "No of Slots" (Total)
+                const total = free + occupied;
+
+                // Update the dashboard
+                freeSlotsEl.textContent = free;
+                occupiedSlotsEl.textContent = occupied;
+                totalSlotsEl.textContent = total; // Update total slots
+                
+                lastUpdateTimeEl.textContent = new Date().toLocaleTimeString();
+
+            } catch (error) {
+                console.error('Error fetching parking status:', error);
+                freeSlotsEl.textContent = 'N/A';
+                occupiedSlotsEl.textContent = 'N/A';
+                totalSlotsEl.textContent = 'N/A';
+                lastUpdateTimeEl.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // --- START POLLING ---
+        setInterval(updateParkingStatus, POLLING_INTERVAL);
+        updateParkingStatus(); // Run immediately on page load
+    </script>
+
+</body>
+</html>
+
