@@ -4,16 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SWIFT SLOT Login</title>
-    <!-- Load Tailwind CSS via CDN -->
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom CSS for Inter font and animations */
+        
         body {
             font-family: 'Inter', sans-serif;
             background-color: #0d0d0d;
         }
 
-        /* Keyframes for the scanning line animation */
+     
         @keyframes scanLine1 {
           0% { transform: translateX(-100%) skewX(-30deg); }
           100% { transform: translateX(400%) skewX(-30deg); }
@@ -29,13 +29,12 @@
           animation: scanLine2 20s linear infinite;
         }
         
-        /* Neon text shadow for the title */
         .neon-title-shadow {
-            /* Adjusted shadow for a sharper glow */
+            
             text-shadow: 0 0 10px #3b82f6, 0 0 25px #a855f7;
         }
 
-        /* Loading spinner visibility */
+        
         .spinner-hidden {
             display: none;
         }
@@ -43,15 +42,15 @@
 </head>
 <body class="min-h-screen flex flex-col items-center justify-center p-4">
 
-    <!-- City Night Background (Image + Overlay for mood and readability) -->
+   
     <div 
         class="fixed inset-0 bg-cover bg-center bg-no-repeat" 
         style="background-image: url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1400&q=80');"
         aria-hidden="true"
     >
-        <!-- Dark Vignette and Gradient Overlay for Readability (Increased opacity to 90 for a cleaner look) -->
+      
         <div class="absolute inset-0 bg-black opacity-90 backdrop-blur-sm"></div>
-        <!-- Subtle Neon Line Animation (Simulating movement/data flow) -->
+
         <div class="absolute inset-0 overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-full">
                 <div class="w-1/3 h-full bg-gradient-to-r from-transparent via-blue-400/20 to-transparent blur-lg animate-scan-line-1"></div>
@@ -62,18 +61,18 @@
         </div>
     </div>
 
-    <!-- Content Container -->
+    
     <div class="relative z-10 w-full max-w-lg">
 
-        <!-- SWIFT SLOT Title - Reduced visual clutter in this section -->
+        
         <div class="text-center mb-10">
             <h1 class="text-6xl font-extrabold uppercase text-white tracking-widest neon-title-shadow">
                 <span class="text-blue-400">SWIFT</span> SLOT
             </h1>
-            <!-- Subtitle removed for a cleaner look -->
+           
         </div>
 
-        <!-- Login Form Card - Smoother, darker background -->
+        
         <form
             id="login-form"
             class="bg-gray-900/90 backdrop-blur-md p-8 sm:p-10 rounded-3xl shadow-2xl border border-gray-800/70"
@@ -82,7 +81,7 @@
                 User Authentication
             </h2>
 
-            <!-- Email/ID Field -->
+          
             <div class="mb-6">
                 <label class="block text-sm font-medium text-gray-400 mb-2" for="email">
                     User ID / Email
@@ -96,7 +95,7 @@
                 />
             </div>
 
-            <!-- Password Field -->
+           
             <div class="mb-8">
                 <label class="block text-sm font-medium text-gray-400 mb-2" for="password">
                     Password (Min. 8 characters)
@@ -111,7 +110,7 @@
                 />
             </div>
 
-            <!-- Login Button (Neon Blue) -->
+         
             <div class="mb-4">
                 <button
                     id="login-btn"
@@ -126,7 +125,7 @@
                 </button>
             </div>
 
-            <!-- Guest Login Button (Neon Purple) -->
+            
             <div class="mb-6">
                 <button
                     id="guest-login-btn"
@@ -137,10 +136,10 @@
                 </button>
             </div>
 
-            <!-- Status Message Display -->
+           
             <div id="status-message" class="text-center p-3 rounded-xl font-medium transition duration-300 hidden"></div>
 
-            <!-- Links made smaller and slightly less prominent -->
+           
             <div class="flex justify-between mt-6 text-xs">
                 <a href="#" class="text-gray-500 hover:text-fuchsia-400 transition duration-200">Reset ID</a>
                 <a href="#" class="text-gray-500 hover:text-blue-400 transition duration-200">New User Registration</a>
@@ -148,9 +147,9 @@
         </form>
     </div>
 
-    <!-- JavaScript Logic -->
+   
     <script>
-        // Set Tailwind classes for the custom buttons
+        
         document.addEventListener('DOMContentLoaded', () => {
             const blueClass = "bg-blue-600 hover:bg-blue-500 shadow-xl shadow-blue-500/50 focus:ring-blue-400 border-2 border-blue-400";
             const purpleClass = "bg-fuchsia-600 hover:bg-fuchsia-500 shadow-xl shadow-fuchsia-500/50 focus:ring-fuchsia-400 border-2 border-fuchsia-400";
@@ -168,9 +167,7 @@
         const messageDiv = document.getElementById('status-message');
 
         const MOCK_USER = 'user@swift.com';
-        const MOCK_PASS = 'slot'; // Note: The mock pass is only 4 characters, which will cause the HTML validation to fail unless you type a longer password. Use a test password of 8+ characters.
-
-        // Utility function to update the status message
+        const MOCK_PASS = 'slot'; 
         function showMessage(text, isSuccess) {
             messageDiv.textContent = text;
             messageDiv.classList.remove('hidden', 'bg-green-600/20', 'text-green-300', 'border-green-400', 'bg-red-600/20', 'text-red-300', 'border-red-400');
@@ -182,7 +179,7 @@
             }
         }
 
-        // Sets loading state for buttons and inputs
+       
         function setLoading(isLoading) {
             const buttons = [loginBtn, guestBtn];
             buttons.forEach(btn => btn.disabled = isLoading);
@@ -194,14 +191,14 @@
                 loginBtn.innerHTML = 'Validating Access... <svg class="animate-spin h-5 w-5 ml-2 inline text-white" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>';
             } else {
                 spinner.classList.add('spinner-hidden');
-                loginBtn.innerHTML = 'Login to SWIFT SLOT'; // Restore text
+                loginBtn.innerHTML = 'Login to SWIFT SLOT'; 
             }
         }
 
-        // Standard Login Handler
+      
         form.addEventListener('submit', (e) => {
             e.preventDefault();
-            // Note: HTML native validation handles the 8-character check before this point.
+          
             
             setLoading(true);
             
@@ -213,8 +210,7 @@
                 if (email === MOCK_USER && password === MOCK_PASS) {
                     showMessage('Login successful! Welcome to Swift Slot.', true);
                 } else if (email || password) {
-                    // For demo purposes, we are using a short mock pass. 
-                    // In a real app, you would check if the typed password matches a securely hashed value.
+                   
                     showMessage(`Invalid credentials. Try "${MOCK_USER}" and any password with 8+ characters.`, false);
                 } else {
                     showMessage('Please enter your User ID and Password.', false);
@@ -222,7 +218,7 @@
             }, 1500);
         });
 
-        // Guest Login Handler
+        
         guestBtn.addEventListener('click', () => {
             setLoading(true);
             setTimeout(() => {
@@ -233,3 +229,4 @@
     </script>
 </body>
 </html>
+
