@@ -1,0 +1,19 @@
+Path to the dataset root folder.
+This should be the name of the folder where you have your 'images' and 'labels' folders.
+path: my_dataset/
+
+Paths to the training and validation images relative to the root folder.
+These tell the model where to find the images and their corresponding labels.
+train: images/train/
+val: images/val/
+
+Number of classes
+nc: 2
+
+Names of the classes in your dataset.
+The order must match the class IDs in your label files.
+names:
+
+'car'
+
+'free'
